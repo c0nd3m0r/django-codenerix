@@ -1,4 +1,4 @@
-__version__ = "1.0.39"
+__version__ = "1.0.40"
 
 __authors__ = [
     'Juan Miguel Taboada Godoy <juanmi@juanmitaboada.com>',
@@ -23,6 +23,9 @@ __requirements__ = {
         "django-multi-email-field",
         "ldap3",
         "django-haystack>=2.6.1",
+        "pytz",
+        "django-haystack>=2.6.1",
+        "elasticsearch>=2.0.0,<3.0.0",
     ],
     '3':[
         "pymongo",
@@ -40,5 +43,8 @@ __requirements__ = {
         "django-multi-email-field",
         "ldap3",
         "django-haystack>=2.6.1",
+        "pytz",
+        "django-haystack>=2.6.1",
+        "elasticsearch>=2.0.0,<3.0.0",
         ],
     }

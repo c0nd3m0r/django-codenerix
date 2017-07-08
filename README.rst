@@ -133,21 +133,29 @@ FAQ
     
     _mysql.c:40:20: fatal error: Python.h: No such file or directory
     #include "Python.h"
-                       ^
-    compilation terminated.
-    error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
+                         ^
+    compilation terminated.
+    error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
 
 * sudo apt-get install libssl-dev, when::
-
+    
     build/temp.linux-x86_64-2.7/_openssl.c:434:30: fatal error: openssl/opensslv.h: No such file or directory
-    #include <openssl/opensslv.h>
-                                 ^
-    compilation terminated.
-    error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
+    #include <openssl/opensslv.h>
+                                     ^
+    compilation terminated.
+    error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
 
 *******
 Credits
 *******
+We are thankful to:
+
+=================================== =================== =====================================================================================
+Author                              Module              Contribution
+=================================== =================== =====================================================================================
+Mounir Messelmeni                   Haystack Engines    Contribution with Asciifolding support for Haystack Elasticsearch Engine
+=================================== =================== =====================================================================================
+
 Several technologies have been used to build `CODENERIX <http://www.codenerix.com>`_:
 
 =================================== =================== =========================== =========================================================
