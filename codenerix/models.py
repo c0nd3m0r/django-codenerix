@@ -179,6 +179,15 @@ class CodenerixModel(CodenerixModelBase):
         self.CodenerixMeta = CodenerixMetaType()
         return super(CodenerixModel, self).__init__(*args, **kwards)
 
+    def __strlog_add__(self):
+        return ''
+
+    def __strlog_update__(self, newobj):
+        return ''
+
+    def __strlog_delete__(self):
+        return ''
+
 
 class GenInterface(CodenerixModelBase):
     """
@@ -240,6 +249,7 @@ if not (hasattr(settings, "PQPRO_CASSANDRA") and settings.PQPRO_CASSANDRA):
         action_flag = models.PositiveSmallIntegerField(_("Action"), choices=TYPE_ACTION)
         change_json = models.TextField('Json', blank=True, null=False)
         change_txt = models.TextField('Txt', blank=True, null=False)
+        snapshot_txt = models.TextField('Snapshot Txt', blank=True, null=False)
         
         class Meta:
             permissions = (
@@ -453,6 +463,10 @@ if not (hasattr(settings, "PQPRO_CASSANDRA") and settings.PQPRO_CASSANDRA):
             except UnicodeDecodeError:
                 log.change_txt = json.dumps({'error': '*JSON_ENCODE_ERROR*'}, default=json_util.default)
             log.action_flag = action
+            if pk is None:
+                log.snapshot_txt = self.__strlog_add__()
+            else:
+                log.snapshot_txt = obj.__strlog_update__(self)
             
             aux = super(GenLog, self).save(**kwargs)
             if pk is None:
@@ -527,5 +541,6 @@ if not (hasattr(settings, "PQPRO_CASSANDRA") and settings.PQPRO_CASSANDRA):
             log.object_repr = force_text(instance)
             log.change_json = json.dumps(attrs, default=json_util.default)
             log.change_txt = json.dumps(attrs_txt, default=json_util.default)
+            log.snapshot_txt = instance.__strlog_delete__()
             log.action_flag = action
             log.save()
