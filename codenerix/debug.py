@@ -40,8 +40,9 @@ def autoload(INSTALLED_APPS, MIDDLEWARE, DEBUG=False, SPAGHETTI=False, ROSETTA=F
         INSTALLED_APPS += ('django_spaghetti',)
     if DEBUG and ROSETTA:
         INSTALLED_APPS+=('rosetta',)
-    if DEBUG and ADMINSITE and 'django.contrib.admin' not in INSTALLED_APPS and not CODENERIX_DISABLE_LOG:
+    if 'django.contrib.admin' not in INSTALLED_APPS and not CODENERIX_DISABLE_LOG:
         INSTALLED_APPS+=('django.contrib.admin',)
+    if DEBUG and ADMINSITE and not CODENERIX_DISABLE_LOG:
         EXTRA_MIDDLEWARES.append('django.contrib.messages.middleware.MessageMiddleware')
     if DEBUG and DEBUG_TOOLBAR:
         INSTALLED_APPS+=('debug_toolbar',)
@@ -145,6 +146,7 @@ def codenerix_statics(DEBUG, STATIC_URL="/static/"):
     <link href="{STATIC_URL}codenerix/css/lists.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/bootstrap-vertical-grid.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/fontawesome/css/font-awesome.css" rel="stylesheet"> \
+    <link href="{STATIC_URL}codenerix/lib/fontawesome-animation/font-awesome-animation.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/textAngular/textAngular.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/angular-quill/quill.snow.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/angular-hotkeys/hotkeys.css" rel="stylesheet"> \
@@ -164,6 +166,7 @@ def codenerix_statics(DEBUG, STATIC_URL="/static/"):
     <link href="{STATIC_URL}codenerix/css/lists.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/bootstrap-vertical-grid.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/fontawesome/css/font-awesome.min.css" rel="stylesheet"> \
+    <link href="{STATIC_URL}codenerix/lib/fontawesome-animation/font-awesome-animation.min.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/textAngular/textAngular.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/angular-quill/quill.snow.css" rel="stylesheet"> \
     <link href="{STATIC_URL}codenerix/lib/angular-hotkeys/hotkeys.min.css" rel="stylesheet"> \
