@@ -20,10 +20,7 @@
 
 import random
 import hashlib
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+import io
 import base64
 from datetime import datetime
 import json
@@ -46,7 +43,7 @@ from codenerix.helpers import get_class
 
 class StaticSelectMulti(forms.widgets.Select):
     __language = None
-    
+
     def __init__(self, *args, **kwargs):
         targs = None
         if args:
@@ -55,15 +52,15 @@ class StaticSelectMulti(forms.widgets.Select):
             targs = kwargs
         if targs:
             # common
-            self.is_required=       targs.get('is_required', False)
-            self.form_name=         targs.get('form_name','')
-            self.field_name=        targs.get('field_name', '')
+            self.is_required = targs.get('is_required', False)
+            self.form_name = targs.get('form_name', '')
+            self.field_name = targs.get('field_name', '')
             # static
-            self.choices=           targs.get('choices', '')
+            self.choices = targs.get('choices', '')
             # dynamic
-            self.autofill_deepness= targs.get('autofill_deepness', 3)
-            self.autofill_url=      targs.get('autofill_url', '')
-            self.autofill=          targs.get('autofill_related', [])
+            self.autofill_deepness = targs.get('autofill_deepness', 3)
+            self.autofill_url = targs.get('autofill_url', '')
+            self.autofill = targs.get('autofill_related', [])
         return super(StaticSelectMulti, self).__init__(*args, **kwargs)
 
     def set_language(self, language):
@@ -175,17 +172,19 @@ class StaticSelect(forms.widgets.Select):
         if kwargs:
             targs = kwargs
         if targs:
-            self.is_required=       targs.get('is_required', False)
-            self.form_name=         targs.get('form_name','')
-            self.field_name=        targs.get('field_name', '')
-            self.choices=             targs.get('choices', '')
+            self.is_required = targs.get('is_required', False)
+            self.form_name = targs.get('form_name', '')
+            self.field_name = targs.get('field_name', '')
+            self.choices = targs.get('choices', '')
         return super(StaticSelect, self).__init__(*args, **kwargs)
 
     def render(self, name, value, attrs=None, choices=()):
         # Initialization
         required = self.attrs.get('ng-required', 'false')
-        change = self.attrs.get('ng-change', 'undefined').replace('"', "'").replace("'","\\'")
-        if change!="undefined":
+        controller = self.attrs.get('ng-controller', None)
+        disabled = self.attrs.get('ng-disabled', None)
+        change = self.attrs.get('ng-change', 'undefined').replace('"', "'").replace("'", "\\'")
+        if change != "undefined":
             change = "'{}'".format(change)
         vmodel = self.field_name
         vid = attrs.get('id', 'id_{0}'.format(name))
@@ -197,6 +196,10 @@ class StaticSelect(forms.widgets.Select):
 
         # Render
         html = u"<input name='{0}' ng-required='{1}' ng-model='{0}' type='hidden'".format(vmodel, required)
+        if controller:
+            html += " ng-controller='{}' ".format(controller)
+        if disabled:
+            html += " ng-disabled='{}' ".format(disabled)
         valuejs = None
         if is_multiple:
             if value:
@@ -213,8 +216,13 @@ class StaticSelect(forms.widgets.Select):
 
         html += ">"
 
-        html += '<ui-select ng-disabled="{}"'.format(ngreadonly)
-
+        html += '<ui-select '
+        if disabled:
+            html += " ng-disabled='{}' ".format(disabled)
+        else:
+            html += ' ng-disabled="{}"'.format(ngreadonly)
+        if controller:
+            html += " ng-controller='{}' ".format(controller)
         if is_multiple:
             html += ' multiple '
         # Build options
@@ -274,7 +282,7 @@ class StaticSelect(forms.widgets.Select):
                 value = "null"
             else:
                 value = "'{}'".format(value)
-            html += u" on-select=\"selectedOptionSelect({0}.{1},{2},{3})\"".format(vform, vmodel, value,change)
+            html += u" on-select=\"selectedOptionSelect({0}.{1},{2},{3})\"".format(vform, vmodel, value, change)
         html += u' theme="bootstrap"'
         html += u' ng-disabled="disabled"'
         html += u' reset-search-input="false"'
@@ -325,12 +333,12 @@ class DynamicSelect(forms.widgets.Select):
         if kwargs:
             targs = kwargs
         if targs:
-            self.is_required=       targs.get('is_required', False)
-            self.form_name=         targs.get('form_name','')
-            self.field_name=        targs.get('field_name', '')
-            self.autofill_deepness= targs.get('autofill_deepness', 3)
-            self.autofill_url=      targs.get('autofill_url', '')
-            self.autofill=          targs.get('autofill_related', [])
+            self.is_required = targs.get('is_required', False)
+            self.form_name = targs.get('form_name', '')
+            self.field_name = targs.get('field_name', '')
+            self.autofill_deepness = targs.get('autofill_deepness', 3)
+            self.autofill_url = targs.get('autofill_url', '')
+            self.autofill = targs.get('autofill_related', [])
         return super(DynamicSelect, self).__init__(*args, **kwargs)
 
     def set_language(self, language):
@@ -352,9 +360,11 @@ class DynamicSelect(forms.widgets.Select):
         if not self.autofill_url:
             raise IOError("autofill_url not defined")
         # Initialization
+        controller = self.attrs.get('ng-controller', None)
+        disabled = self.attrs.get('ng-disabled', None)
         required = self.attrs.get('ng-required', 'false')
-        change = self.attrs.get('ng-change', 'undefined').replace('"', "'").replace("'","\\'")
-        if change!="undefined":
+        change = self.attrs.get('ng-change', 'undefined').replace('"', "'").replace("'", "\\'")
+        if change != "undefined":
             change = "'{}'".format(change)
         vmodel = self.field_name
         vid = attrs.get('id', 'id_{0}'.format(name))
@@ -373,11 +383,19 @@ class DynamicSelect(forms.widgets.Select):
 
         # Render
         html = u"<input name='{0}' ng-required='{1}' ng-model='{0}' id='{0}' type='hidden'".format(vmodel, required)
+        if controller:
+            html += " ng-controller='{}' ".format(controller)
+        if disabled:
+            html += " ng-disabled='{}' ".format(disabled)
         # Set initial value
         if value:
             html += u" ng-init=\"{0}={1}\"".format(vmodel, value, vform)
         html += ">"
         html += '<ui-select'
+        if controller:
+            html += " ng-controller='{}' ".format(controller)
+        if disabled:
+            html += " ng-disabled='{}' ".format(disabled)
         if hasattr(self, "multiple") and self.multiple:
             html += ' multiple '
         if value:
@@ -452,26 +470,26 @@ class DynamicInput(forms.widgets.Input):
         html = super(DynamicInput, self).render(name, value, attrs=attrs)
 
         # Initialization
-        vform=self.form_name
-        vurl = reverse(self.autofill_url,kwargs={'search':'a'})[:-1]
+        vform = self.form_name
+        vurl = reverse(self.autofill_url, kwargs={'search': 'a'})[:-1]
 
         # Render
         ticket = "uib-typeahead=\"item.label for item in getAutoComplete(http,'{0}', {{".format(vurl)
-        comma=False
+        comma = False
         for field in self.autofill:
             if comma:
                 html += ","
             else:
-                comma=True
-            ticket+="'{0}':{1}.{0}".format(field,vform)
-        ticket+="}},$viewValue,{0})\"".format(self.autofill_deepness)
-        ticket+=' typeahead-on-select="autoFillFields($item, $model, $label, $event)"'
-        ticket+=' typeahead-wait-ms="800"'
-        ticket+=' ng-change="resetAutoComplete()"'
+                comma = True
+            ticket += "'{0}':{1}.{0}".format(field, vform)
+        ticket += "}},$viewValue,{0})\"".format(self.autofill_deepness)
+        ticket += ' typeahead-on-select="autoFillFields($item, $model, $label, $event)"'
+        ticket += ' typeahead-wait-ms="800"'
+        ticket += ' ng-change="resetAutoComplete()"'
 
         # Save ticket inside html
-        html=html.replace('type="None"','type="text"')
-        html=html.replace('/>',"{0}/>".format(ticket))
+        html = html.replace('type="None"', 'type="text"')
+        html = html.replace('/>', "{0}/>".format(ticket))
 
         # Return updated html
         return html
@@ -520,23 +538,17 @@ class FileAngularInput(forms.widgets.FileInput):
         if isinstance(field, dict):
             # Prepare filename
             temp_hexname = "{0}{1}".format(field['filename'].encode('ascii', 'ignore'), random.random())
-            try:
-                # python 2.7
-                hexname = hashlib.sha1(temp_hexname).hexdigest()
-            except TypeError:
-                # python 3.x
-                temp_hexname = bytes(temp_hexname, encoding='utf-8')
-                hexname = hashlib.sha1(temp_hexname).hexdigest()
+            hexname = hashlib.sha1(temp_hexname.encode()).hexdigest()
 
             ext = field['filename'].split(".")[-1]
             if not ext:
                 ext = "dat"
 
             # Prepare temporal file in memory
-            f = StringIO()
-            f.write(base64.b64decode(field[u'base64']))
+            f = io.BytesIO()
             f.name = "{0}.{1}".format(hexname, ext)
             f.original_name = field['filename']
+            f.write(base64.b64decode(field[u'base64']))
             f.seek(0)
 
             # Add the files to FILES
@@ -602,67 +614,65 @@ class Date2TimeInput(forms.widgets.DateTimeInput):
                     value_date = aux.date()
                     value_time = '{0:02d}{1:02d}'.format(aux.time().hour, aux.time().minute)
 
+        startview = 2
+        minview = 2
+        maxview = 4
+        icon = 'calendar'
 
-        startview=2
-        minview=2
-        maxview=4
-        icon='calendar'
-        
         ##############################################################################
         # WARNING: Language code should be detected on runtime from the user request #
         ##############################################################################
         langcode = settings.LANGUAGE_CODE
-        format_date = formats.get_format('DATETIME_INPUT_FORMATS', lang=langcode)[0].replace("%","").replace('d','dd').replace('m','mm').replace('Y','yyyy').replace('H','hh').replace('M','ii').split(" ")[0]
+        format_date = formats.get_format('DATETIME_INPUT_FORMATS', lang=langcode)[0].replace("%", "").replace('d', 'dd').replace('m', 'mm').replace('Y', 'yyyy').replace('H', 'hh').replace('M', 'ii').split(" ")[0]
         language = settings.LANGUAGE_CODE
-        #language = {{LANGUAGE_CODE|default:"en"}}
+        # language = {{LANGUAGE_CODE|default:"en"}}
 
         if label:
             html = '<label style="margin-right:10px" class="pull-right" for="id_date">'+_('Hour')+'</label>'
         else:
             html = ''
-        html +=  '<div class="row">'
-        html +=  '<div class="col-sm-8">'
-        html +=  ' <div class="dropdown">'
-        html +=  '    <div id="date_{0}" class="input-group date">'.format(name)
+        html += '<div class="row">'
+        html += '<div class="col-sm-8">'
+        html += ' <div class="dropdown">'
+        html += '    <div id="date_{0}" class="input-group date">'.format(name)
 
-        attributes = ' '.join([ x+'="'+y+'"' for x,y in attrs.iteritems()])
-        html +=  '        <input type="text" name="{0}" id="id_{0}" value="{1}" {2} />'.format(name, value_date, attributes);
-        html +=  '        <span class="input-group-addon"><i class="glyphicon glyphicon-{0}"></i></span>'.format(icon)
-        html +=  '    </div>'
-        html +=  ' </div>'
-        html +=  '</div>'
-        html +=  '<div class="col-sm-4">'
+        attributes = ' '.join([x+'="'+y+'"' for x, y in attrs.iteritems()])
+        html += '        <input type="text" name="{0}" id="id_{0}" value="{1}" {2} />'.format(name, value_date, attributes)
+        html += '        <span class="input-group-addon"><i class="glyphicon glyphicon-{0}"></i></span>'.format(icon)
+        html += '    </div>'
+        html += ' </div>'
+        html += '</div>'
+        html += '<div class="col-sm-4">'
 
         ngmodel = attrs['ng-model'].split('\']')
-        if len(ngmodel)>1:
+        if len(ngmodel) > 1:
             ngmodel[0] = "{}_time".format(ngmodel[0])
             ngmodel = "']".join(ngmodel)
         else:
             ngmodel = attrs['ng-model']+'_time'
-        #attrs['ng-model'] = attrs['ng-model']+'_time'
+        # attrs['ng-model'] = attrs['ng-model']+'_time'
         attrs['ng-model'] = ngmodel
-        attributes = ' '.join([ x+'="'+y+'"' for x,y in attrs.iteritems()])
-        html +=  '        <input type="text" name="{0}_time" id="id_{0}_time" value="{1}" maxlength="4" {2} />'.format(name, value_time, attributes);
-        html +=  '</div>'
-        html +=  '</div>'
-        html +=  '<script type="text/javascript"> '
-        html +=  '$("#date_{0}").datetimepicker({1}'.format(name, '{')
-        html +=  ' format: "{0}",'.format(format_date)
-        html +=  ' autoclose: true,'
-        html +=  ' language:"{0}",'.format(language)
-        html +=  ' todayBtn: true,'
-        html +=  ' weekStart:1,'
-        html +=  ' todayHighlight:true,'
-        html +=  ' pickerPosition:"bottom-left",'
-        html +=  ' keyboardNavigation:false,'
-        html +=  ' startView:{0},'.format(startview)
-        html +=  ' minView:{0},'.format(minview)
-        html +=  ' maxView:{0},'.format(maxview)
-        html +=  ' minuteStep: 15,'
-        html +=  '});'
-        html +=  '</script>'
+        attributes = ' '.join([x+'="'+y+'"' for x, y in attrs.iteritems()])
+        html += '        <input type="text" name="{0}_time" id="id_{0}_time" value="{1}" maxlength="4" {2} />'.format(name, value_time, attributes)
+        html += '</div>'
+        html += '</div>'
+        html += '<script type="text/javascript"> '
+        html += '$("#date_{0}").datetimepicker({1}'.format(name, '{')
+        html += ' format: "{0}",'.format(format_date)
+        html += ' autoclose: true,'
+        html += ' language:"{0}",'.format(language)
+        html += ' todayBtn: true,'
+        html += ' weekStart:1,'
+        html += ' todayHighlight:true,'
+        html += ' pickerPosition:"bottom-left",'
+        html += ' keyboardNavigation:false,'
+        html += ' startView:{0},'.format(startview)
+        html += ' minView:{0},'.format(minview)
+        html += ' maxView:{0},'.format(maxview)
+        html += ' minuteStep: 15,'
+        html += '});'
+        html += '</script>'
         return html
-
 
     def value_from_datadict(self, data, files, name):
         # Get field
@@ -673,23 +683,23 @@ class Date2TimeInput(forms.widgets.DateTimeInput):
                 ttime = data[name+"_time"].strip()
 
                 if ttime.isnumeric():
-                    if len(ttime)==0:
-                        ttime='00:00'
-                    elif len(ttime)<=2:
-                        ttime='00:{0}'.format(ttime)
-                    elif len(ttime)==3:
-                        ttime='0{0}:{1}'.format(ttime[:1], ttime[1:])
+                    if len(ttime) == 0:
+                        ttime = '00:00'
+                    elif len(ttime) <= 2:
+                        ttime = '00:{0}'.format(ttime)
+                    elif len(ttime) == 3:
+                        ttime = '0{0}:{1}'.format(ttime[:1], ttime[1:])
                     else:
-                        ttime='{0}:{1}'.format(ttime[:2], ttime[2:])
+                        ttime = '{0}:{1}'.format(ttime[:2], ttime[2:])
 
             try:
                 new_date = datetime.strptime("{0} {1}".format(date, ttime), formats.get_format('DATETIME_INPUT_FORMATS', lang=get_language())[0])
             except ValueError:
                 new_date = None
-            #new_date = "{0} {1}".format(date, ttime)
+            # new_date = "{0} {1}".format(date, ttime)
         else:
             new_date = None
-            #new_date = ''
+            # new_date = ''
 
         data[name] = new_date
         return data[name]
@@ -698,7 +708,7 @@ class Date2TimeInput(forms.widgets.DateTimeInput):
 class WysiwygAngularRender(forms.widgets.HiddenInput):
     def render_wysiwyg(self, ngmodel, extraif="", force_editors=False, attrs=None):
         # Compute hashkey
-        hashkey = attrs.get('id',str(random.randint(0,1000)))
+        hashkey = attrs.get('id', str(random.randint(0, 1000)))
         # Editors
         editors = {}
         editors['quill'] = _("NG Quill")
@@ -752,9 +762,9 @@ class WysiwygAngularRender(forms.widgets.HiddenInput):
 class WysiwygAngularInput(WysiwygAngularRender):
     def render(self, name, value, attrs=None):
         # Compute hashkey
-        hashkey = attrs.get('id',str(random.randint(0,1000)))
+        hashkey = attrs.get('id', str(random.randint(0, 1000)))
         # Get model name
-        vmodel = attrs.get('ng-model') #.replace("'",'"')
+        vmodel = attrs.get('ng-model')  # .replace("'",'"')
         init = attrs.get('ng-init', '')
 
         if value is None:
@@ -772,10 +782,10 @@ class WysiwygAngularInput(WysiwygAngularRender):
 class MultiBlockWysiwygInput(WysiwygAngularRender):
     def render(self, name, value, attrs=None):
         # Compute hashkey
-        hashkey = attrs.get('id',str(random.randint(0,1000)))
+        hashkey = attrs.get('id', str(random.randint(0, 1000)))
 
         # Get model name
-        vmodel = attrs.get('ng-model').replace("'",'"')
+        vmodel = attrs.get('ng-model').replace("'", '"')
         # Get normal field
         html = "<div ng-init='{0}={{}}; {0}[\"__JSON_DATA__\"]={1}'></div>".format(vmodel, value)
         html += u"<input type='hidden' name='{0}' ng-model='{1}'>".format(name, vmodel)
@@ -783,7 +793,7 @@ class MultiBlockWysiwygInput(WysiwygAngularRender):
         # Render blocks with ANGULAR
         html += "<div ng-repeat='(key, block) in {0}[\"__JSON_DATA__\"]' ng-init='editor_{1}=\"quill\"'>".format(vmodel, hashkey)
         html += '<label>{{key}}</label>'
-        
+
         html += '<div ng-show="block.deleted"><p class="text-danger">{}</p></div>'.format(_("Field deleted in the template"))
         html += self.render_wysiwyg(ngmodel='block.value', extraif="block.type==\"string\" && ", attrs=attrs)
         html += "</div>"
@@ -792,10 +802,54 @@ class MultiBlockWysiwygInput(WysiwygAngularRender):
         return html
 
 
+class VisualHTMLInput(forms.widgets.HiddenInput):
+    '''
+    Example
+    service_day_html = forms.CharField(
+        label=_("Quota"),  # Optional
+        required=False,
+        widget=VisualHTMLInput(),
+        initial={'selfname': 'service_day_html', 'data': "<div id='<#id#>' ng-init='<#form:service_day_color#>=\"#ff00ff\"' color-contrast='{{<#form:service_day_color#>}}'>{{<#form:service_day_color#>}}</div>"}
+    )
+    '''
+
+    visual = True
+
+    def render(self, name, value, attrs=None):
+        # Compute hashkey
+        hashkey = attrs.get('id', str(random.randint(0, 1000)))
+        vmodel = attrs.get('ng-model').replace("'", '"')
+        selfname = self.attrs.get('selfname', None)
+        value = self.attrs.get('data', None)
+
+        # Process all tags
+        if value is not None:
+            for keydirty in value.split("<#")[1:]:
+                key = keydirty.split("#>")[0]
+                keysp = key.split(":")
+                actor = keysp[0]
+                args = keysp[1:]
+                if actor == 'form':
+                    if selfname:
+                        newname = vmodel.replace(selfname, args[0])
+                        value = value.replace('<#{}#>'.format(key), newname)
+                    else:
+                        raise IOError('selfname must be included in the attrs from the widget with the name of the field in the form')
+                elif actor == 'id':
+                    value = value.replace('<#id#>', hashkey)
+                elif actor == 'ngmodel':
+                    value = value.replace('<#ngmodel#>', vmodel)
+        else:
+            raise IOError('data must be included in the attrs from the widget with the name of the field in the form')
+
+        # Return result
+        return value
+
+
 class BootstrapWysiwygInput(forms.widgets.HiddenInput):
     def render(self, name, value, attrs=None):
         # Get model name
-        #vmodel = attrs.get('ng-model').replace("'",'"')
+        # vmodel = attrs.get('ng-model').replace("'",'"')
 
         html = _("We are working on this plugin, it will be ready for next version")
 
@@ -829,5 +883,5 @@ class GenReCaptchaInput(ReCaptcha):
         if self.legacy:
             html = super(GenReCaptchaInput, self).render(name, value, attrs)
         else:
-            html='<div vc-recaptcha key="\'{}\'" ng-model="{}"></div>'.format(self.public_key,name)
+            html = '<div vc-recaptcha key="\'{}\'" ng-model="{}"></div>'.format(self.public_key, name)
         return html
