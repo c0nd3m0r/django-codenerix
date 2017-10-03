@@ -70,7 +70,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Border, Side, PatternFill, Color  # , Alignment
 from openpyxl.writer.excel import save_virtual_workbook
 
-from codenerix.helpers import epochdate, monthname, get_static, get_template, get_profile, model_inspect, get_class, remove_getdisplay, daterange_filter
+from codenerix.helpers import epochdate, monthname, get_static, get_template, get_profile, model_inspect, get_class, remove_getdisplay, daterange_filter, trace_json_error
 from codenerix.templatetags.codenerix_lists import unlist
 
 # Import only when defined by the user and there is something we can work with
@@ -1235,6 +1235,17 @@ class GenList(GenBase, ListView):
                     fields[field.name] = (field.verbose_name, lambda x, fieldname=field.name: Q(**{'{}'.format(fieldname): x}), 'input')
         return fields
 
+    def autoSearchQ(self, MODELINF, text):
+        fields_show = [x[0] for x in MODELINF.fields()]
+        fields = {}
+        for field in self.model._meta.get_fields():
+            if field.name in fields_show:
+                if type(field) in [models.CharField, models.TextField]:
+                    fields[field.name] = Q(**{'{}__icontains'.format(field.name): text})
+                elif type(field) in [models.IntegerField, models.SmallIntegerField, models.FloatField, ]:
+                    fields[field.name] = Q(**{'{}__icontains'.format(field.name): text})
+        return fields
+
     def get_queryset(self):
         # Call the base implementation
         if not self.haystack:
@@ -1547,8 +1558,14 @@ class GenList(GenBase, ListView):
             if len(search) > 0 and search[-1] == ' ':
                 search = search[:-1]
 
-            # Get fields to search in
-            searchs = MODELINF.searchQ(search)
+
+
+            searchs = {}
+            # Autofilter system
+            if self.autofiltering:
+                searchs.update(self.autoSearchQ(MODELINF, search))
+            # Fields to search in from the MODELINF
+            searchs.update(MODELINF.searchQ(search))
             qobjects = {}
             qobjectsCustom = {}
             for name in searchs:
@@ -2666,7 +2683,16 @@ class GenList(GenBase, ListView):
             try:
                 json_answer = json.dumps(answer)
             except TypeError as e:
-                raise TypeError("The method json_builder() from model '{0}' inside app '{1}' didn't return a JSON serializable object. Error was: {2}".format(self._modelname, self._appname, e))
+                # Try to locate where the problem is happening
+                try:
+                    key_path = trace_json_error(answer)
+                except Exception:
+                    key_path = None
+                if key_path:
+                    locator = ", a probably place for the problem is at: {0}".format(" -> ".join(key_path))
+                else:
+                    locator = " with no success"
+                raise TypeError("The method json_builder() from model '{0}' inside app '{1}' didn't return a JSON serializable object, we have tried to locate the exacly point for the error{2}. Error was: {3}".format(self._modelname, self._appname, locator, e))
             # Return the new answer
             return HttpResponse(json_answer, content_type='application/json', **response_kwargs)
         else:

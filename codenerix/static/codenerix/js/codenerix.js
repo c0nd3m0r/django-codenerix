@@ -51,6 +51,7 @@ var codenerix_libraries = [
     'ngQuill',
     'cfp.hotkeys',
 ];
+var codenerix_debug = false;
 
 // Add the remove method to the Array structure
 Array.prototype.remove = function(from, to) {
@@ -722,7 +723,7 @@ function formsubmit($scope, $rootScope, $http, $window, $state, $templateCache, 
                     if (typeof(formElement.$viewValue) == "object"){
                         var value = [];
                         angular.forEach(formElement.$viewValue, function(val, key){
-                            if (typeof(val.id) !== 'undefined'){
+                            if (val != undefined && typeof(val.id) !== 'undefined'){
                                 value.push(val.id);
                             }
                         });
@@ -932,6 +933,9 @@ function inlinked($scope, $rootScope, $http, $window, $uibModal, $state, $stateP
                         });
                         if (!inlist){
                             // Attach the new element
+                            if (options == undefined){
+                                options = [];
+                            }
                             options.push({'id': answer["__pk__"], 'label': answer["__str__"]});
                         }
                         /*
@@ -1636,7 +1640,9 @@ function codenerix_builder(libraries, routes) {
         // Create the routing system
         module.config(['$stateProvider', '$urlRouterProvider',
             function($stateProvider, $urlRouterProvider) {
-                $stateProvider
+                if (codenerix_debug == true) {
+                    console.log("Router: default '/'");
+                }
                 $urlRouterProvider.otherwise('/');
             }
         ]);
@@ -1724,7 +1730,7 @@ function codenerix_builder(libraries, routes) {
                 controller: 'SubListCtrl'
             }}]);
         }
-        
+
         // Process known routes
         angular.forEach(known, function(value, key) {
             // Get configuration
@@ -1781,13 +1787,15 @@ function codenerix_builder(libraries, routes) {
                 // Attach the new state
                 module.config(['$stateProvider', '$urlRouterProvider',
                     function($stateProvider, $urlRouterProvider) {
-                        // console.log(state+" - "+JSON.stringify(state_dict));
+                        if (codenerix_debug == true) {
+                             console.log("Router: kwnon '"+state+"' -> "+JSON.stringify(state_dict));
+                        }
                         $stateProvider.state(state, state_dict);
                     }
                 ]);
             }
         });
-        
+
         // Process new routes
         angular.forEach(routes, function(config, state) {
             if (config!==null) { 
@@ -1821,13 +1829,20 @@ function codenerix_builder(libraries, routes) {
                 // Attach the new state
                 module.config(['$stateProvider', '$urlRouterProvider',
                     function($stateProvider, $urlRouterProvider) {
-                        // console.log(state+" - "+JSON.stringify(state_dict));
+                        if (codenerix_debug == true) {
+                             console.log("Router: new '"+state+"' -> "+JSON.stringify(state_dict));
+                        }
                         $stateProvider.state(state, state_dict);
                     }
                 ]);
             }
         });
     }
+
+    if (codenerix_debug == true) {
+         console.info("Router: if the path of the URL doesn't exists, AngularJS will now warn you in anyway, the state will stay with a blank page");
+    }
+
     
     // Add factory
     module.factory("ListMemory",function(){return {};});
