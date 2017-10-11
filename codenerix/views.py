@@ -83,6 +83,8 @@ def status(request, status, answer):
     status = status.lower()
     if status == 'accept':
         out = 202     # Accepted
+    elif status == 'conflict':
+        out = 409     # Conflict: everything is fine in the request but the resource can not accept the request because the actual state of the resource itself
     else:
         out = 501     # Not Implemented
     return HttpResponse(answerjson, status=out)
@@ -2779,10 +2781,21 @@ class GenModify(object):
     get_template_names_key='add'                    Sufix added to all templates when templates name resolution is looking for the template
     show_details = True                             With 'True' it will keep a show_details variable inside the context (by default 'False')
     show_internal_name = False                      Will avoid showing the name of the model on the top of the form (default is 'True')
-    hide_foreignkey_button = True                   With 'True' it will hide the '+' (plus button) from forms for creating new registers
+    hide_foreignkey_button = True                   When 'True' it will hide the '+' (plus button) from forms for creating new registers
 
-    json = True                                     With 'True' it will return a JSON answer
-    json_details = True                             With 'True' it will add details to JSON answer
+    json = True                                     When 'True' it will return a JSON answer (default: True)
+    json_details = True                             When 'True' it will add details to JSON answer (default: True)
+
+    linkdelete = True                               When 'True' it will show "Delete" button on forms (default: True)
+    linkback = True                                 When 'True' it will show "Go back" button on forms (default: True)
+    linksavenew = True                              When 'True' it will show "Save and new" button on forms (default: True)
+    linksavehere = True                             When 'True' it will show "Save here" button on forms (default: True)
+
+    buttons_top = True                              When 'True' it will show form button on the top of the form (default: True)
+    buttons_bottom = True                           When 'True' it will show form button on the bottom of the form (default: True)
+
+    angular_submit = 'submit'                       Name of the method inside AngularJS scope that will receive submit actions
+    angular_delete = 'delete'                       Name of the method inside AngularJS scope that will receive delete actions
     '''
 
     def __init__(self, *args, **kwargs):
@@ -2864,14 +2877,15 @@ class GenModify(object):
         # Check showdetails
         context['show_details'] = getattr(self, 'show_details', False)
 
-        # Check linkdelete
+        # Check links
         context['linkdelete'] = getattr(self, 'linkdelete', True)
-
-        # Check linkback
         context['linkback'] = getattr(self, 'linkback', True)
-
-        # Check linksavenew
         context['linksavenew'] = getattr(self, 'linksavenew', True)
+        context['linksavehere'] = getattr(self, 'linksavehere', True)
+
+        # Check submit/delete
+        context['angular_submit'] = getattr(self, 'angular_submit', 'submit')
+        context['angular_delete'] = getattr(self, 'angular_delete', 'delete')
 
         # Check buttons top/bottom
         context['buttons_top'] = getattr(self, 'buttons_top', True)
