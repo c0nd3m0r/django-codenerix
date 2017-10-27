@@ -1240,13 +1240,25 @@ class GenList(GenBase, ListView):
     def autoSearchQ(self, MODELINF, text):
         fields_show = [x[0] for x in MODELINF.fields()]
         fields = {}
-        for field in self.model._meta.get_fields():
-            if field.name in fields_show:
-                if type(field) in [models.CharField, models.TextField]:
-                    fields[field.name] = Q(**{'{}__icontains'.format(field.name): text})
-                elif type(field) in [models.IntegerField, models.SmallIntegerField, models.FloatField, ]:
-                    fields[field.name] = Q(**{'{}__icontains'.format(field.name): text})
+        for word in text.split(" "):
+            for field in self.model._meta.get_fields():
+                if field.name in fields_show:
+                    if type(field) in [models.CharField, models.TextField]:
+                        qobject = Q(**{'{}__icontains'.format(field.name): word})
+                    elif type(field) in [models.IntegerField, models.SmallIntegerField, models.FloatField, ]:
+                        qobject = Q(**{'{}__icontains'.format(field.name): word})
+                    else:
+                        qobject = None
+                    if qobject:
+                        if field.name in fields:
+                            fields[field.name] = Q(fields[field.name] | qobject)
+                        else:
+                            fields[field.name] = qobject
         return fields
+
+    def custom_queryset(self, queryset):
+        # Here you can change the queryset before of the pagination
+        return queryset
 
     def get_queryset(self):
         # Call the base implementation
@@ -1710,10 +1722,10 @@ class GenList(GenBase, ListView):
             get = context['get']
             context['datefilter'] = {}
             # Save the deepness
-            if (deepness_index+1 == len(date_elements)):
+            if deepness_index + 1 == len(date_elements):
                 context['datefilter']['deepness'] = None
             else:
-                context['datefilter']['deepness'] = date_elements[deepness_index+1]
+                context['datefilter']['deepness'] = date_elements[deepness_index + 1]
             context['datefilter']['deepnessback'] = []
             context['datefilter']['deepnessinit'] = []
             for element in get:
@@ -1747,7 +1759,7 @@ class GenList(GenBase, ListView):
                 else:
                     month = '__'
                 if f['hour'][2]:
-                    rightnow = string_concat(grv(f, 'day'), "/", month, "/", grv(f, 'year'), " ", grv(f, 'hour'), ":",  grv(f, 'minute'), ":", grv(f, 'second'))
+                    rightnow = string_concat(grv(f, 'day'), "/", month, "/", grv(f, 'year'), " ", grv(f, 'hour'), ":", grv(f, 'minute'), ":", grv(f, 'second'))
                 else:
                     rightnow = string_concat(grv(f, 'day'), "/", month, "/", grv(f, 'year'))
             context['datefilter']['rightnow'] = rightnow
@@ -2035,6 +2047,8 @@ class GenList(GenBase, ListView):
                 queryset = queryset.annotate(**query_renamed).values(*query_optimizer)
             else:
                 queryset = queryset.values(*query_optimizer)
+        if hasattr(self, 'custom_queryset'):
+            queryset = self.custom_queryset(queryset)
         """
         raise Exception("FOUND: {} -- __foreignkeys: {} -- __columns: {} -- autorules_keys: {} -- \
             query_select_related: {} -- query_renamed: {} -- query_optimizer: {} | use_extra: {}| -- \
@@ -3634,6 +3648,8 @@ class GenForeignKey(GenBase, View):
             objd = obj
             for subkey in key.split("__"):
                 objd = getattr(objd, subkey, None)
+            if callable(objd):
+                objd = objd()
             args.append(objd)
 
         # Return final label
@@ -3670,6 +3686,9 @@ class GenForeignKey(GenBase, View):
         # info['_clear_'] = []
         return info
 
+    def custom_answer(self, answer):
+        return answer
+
     def get(self, request, *args, **kwargs):
 
         # Set class internal variables
@@ -3700,11 +3719,17 @@ class GenForeignKey(GenBase, View):
             answer.append({'id': '', 'label': '...'})
 
         # Convert the answer
-        json_answer = json.dumps({
+        final_answer = {
             "clear": getattr(self, 'clear_fields', []),
             "rows": answer,
             "readonly": getattr(self, 'readonly_fields', [])
-        })
+        }
+
+        # Go throught custom answer
+        custom_answer = self.custom_answer(final_answer)
+
+        # Convert the answer to JSON
+        json_answer = json.dumps(custom_answer)
 
         # Send it
         return HttpResponse(json_answer, content_type='application/json')
