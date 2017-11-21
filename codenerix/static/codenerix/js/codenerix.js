@@ -247,35 +247,45 @@ function openmodal($scope, $timeout, $uibModal, size, functions, callback, locke
                     alert(msg);
                 }
 
-                $scope.delete = function(msg,url) {
-                    if (confirm(msg)) {
-                        // Build url
-                        if (url==undefined) {
-                            url = ws+"/../delete";
-                        }
-                        // Clear cache
-                        $templateCache.remove(url);
-                        // User confirmed
-                        $http.post( url, {}, {} )
-                        .success(function(answer, stat) {
-                            // Check the answer
-                            if (stat==202) {
-                                // Everything OK, close the window
-                                $uibModalInstance.close(answer);
+                $scope.delete = function(msg, target, nurl) {
+                    if (typeof(nurl) == 'undefined'){
+                        var uurl = $scope.url;
+                    } else {
+                        var uurl = nurl;
+                    }
+                    
+                    if ((target == 'delete') || (typeof(target) == 'undefined')) {
+                        if (confirm(msg)) {
+                            // Clear cache
+                            $templateCache.remove(uurl);
+                            // Get url
+                            if (typeof(nurl) == 'undefined') {
+                                var uurl = uurl + "/../delete";
                             } else {
-                                // Error happened, show an alert
-                                console.log("ERROR "+stat+": "+answer)
-                                alert("ERROR "+stat+": "+answer)
+                                var uurl = nurl;
                             }
-                        })
-                        .error(function(data, status, headers, config) {
-                            if (cnf_debug){
-                                alert(data);
-                            }else{
-                                alert(cnf_debug_txt)
-                            }
-                        });
-                     }
+                            console.log(uurl);
+                            $http.post( uurl, {}, {} )
+                            .success(function(answer, stat) {
+                                // Check the answer
+                                if (stat==202) {
+                                    // Everything OK, close the window
+                                    $uibModalInstance.close(answer);
+                                } else {
+                                    // Error happened, show an alert
+                                    console.log("ERROR "+stat+": "+answer)
+                                    alert("ERROR "+stat+": "+answer)
+                                }
+                            })
+                            .error(function(data, status, headers, config) {
+                                if (cnf_debug){
+                                    alert(data);
+                                }else{
+                                    alert(cnf_debug_txt)
+                                }
+                            });
+                        }
+                    }
                 };
                 
                 // Set cancel function
@@ -720,12 +730,6 @@ function formsubmit($scope, $rootScope, $http, $window, $state, $templateCache, 
             }
         });
 
-        /*  
-            2016-07-15
-            Se quita porque los angular material chip no son elementos html por lo que no estan en el formulario
-            2016-10-17
-            Se vuelve a descomentar para ser compatible con las directivas dinamicas (iberosime) y con los multiselect dinamicos
-        */
         angular.forEach( form , function ( formElement , fieldName ) {
             // If the fieldname starts with a '$' sign, it means it's an Angular property or function. Skip those items.
             if ( fieldName[0] === '$' ) {
@@ -748,8 +752,10 @@ function formsubmit($scope, $rootScope, $http, $window, $state, $templateCache, 
                 }
             }
         });
+
         // Clear cache
         $templateCache.remove(url);
+
         // POST
         $http.post( url, in_data, { headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'} } )
         .success(function(answer, stat) {

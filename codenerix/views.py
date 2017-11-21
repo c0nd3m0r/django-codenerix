@@ -490,6 +490,9 @@ def gen_auth_permission(user, action_permission, model_name, appname, permission
 
 
 class GenBase(object):
+    '''
+    public = False                                      # Will not perform permission controls
+    '''
 
     json = False
     search_filter_button = False
@@ -518,7 +521,13 @@ class GenBase(object):
         'Delete': _("Delete"),
         'View': _("View"),
         'Download': _("Download"),
-        }
+        'Save': _('Save'),
+        'Save_here': _("Save here"),
+        "Save_and_new": _("Save & new"),
+        "Reload": _("Reload"),
+        "Go_back": _("Go back"),
+        "Delete": _("Delete"),
+    }
 
     # Default tabs information
     tabs = []
@@ -978,6 +987,7 @@ class GenList(GenBase, ListView):
         }
 
         default_ordering = '-name'                  # Set a default ordering (Example: descent order by name)
+        default_ordering = ['-name', 'date', '-xz'] # Set a default ordering (Example: descent order by name, ascendent order by date & descendent order by xz)
 
         # compact_rows = ( compact_field, compact_subelements ) # NO IDEA ?????? It looks outdated to me -> Already deprecated in the source code
 
@@ -2904,7 +2914,7 @@ class GenModify(object):
         # Check buttons top/bottom
         context['buttons_top'] = getattr(self, 'buttons_top', True)
         context['buttons_bottom'] = getattr(self, 'buttons_bottom', True)
-        context['form_title'] = getattr(self, 'title', True)
+        context['form_title'] = getattr(self, 'title', False)
 
         # Check hide_foreignkey_button
         context['hide_foreignkey_button'] = getattr(self, 'hide_foreignkey_button', False)
@@ -3695,7 +3705,7 @@ class GenForeignKey(GenBase, View):
         self._setup(request)
 
         # Get data
-        search = kwargs.get('search', '')
+        search = self.request.GET.get('search', kwargs.get('search', ''))
         filterstxt = self.request.GET.get('filter', '{}')
         filters = json.loads(filterstxt)
         self.filters = filters

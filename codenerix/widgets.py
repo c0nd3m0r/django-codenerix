@@ -122,11 +122,16 @@ class StaticSelectMulti(forms.widgets.Select):
             init = "getForeignKeys(http,'{0}',amc_items,{{".format(vurl)
             comma = False
             for field in self.autofill:
+                if ':' in field:
+                    field_filter = field.split(':')[-1]
+                    field = field.split(':')[0]
+                else:
+                    field_filter = field
                 if comma:
                     init += ","
                 else:
                     comma = True
-                init += "'{0}':{1}.{0}".format(field, vform)
+                init += "'{0}':{1}.{2}".format(field, vform, field_filter)
             init += "}},'{0}',{0},$select.search,{1})\"".format(vmodel, self.autofill_deepness)
 
         html = u'<md-chips ng-model="amc_select.{0}" md-autocomplete-snap id="{0}" name="{0}" '.format(vmodel)
@@ -350,11 +355,16 @@ class DynamicSelect(forms.widgets.Select):
         html = "getForeignKeys(http,'{0}',options,{{".format(vurl)
         comma = False
         for field in self.autofill:
+            if ':' in field:
+                field_filter = field.split(':')[-1]
+                field = field.split(':')[0]
+            else:
+                field_filter = field
             if comma:
                 html += ","
             else:
                 comma = True
-            html += "'{0}':{1}.{0}".format(field, vform)
+            html += "'{0}':{1}.{2}".format(field, vform, field_filter)
         html += "}}, '{0}', {1}, {2}, {3});\"".format(vmodel, vmodel, search, self.autofill_deepness)
         return html
 
@@ -884,8 +894,15 @@ class GenReCaptchaInput(ReCaptcha):
     legacy = False
 
     def __init__(self, *args, **kwargs):
-        self.recaptcha_response_name = 'g-recaptcha-response'
-        self.recaptcha_challenge_name = 'g-recaptcha-response'
+        # Decide name of the field in the POST
+        if 'fieldname' in kwargs:
+            fieldname = kwargs.pop('fieldname')
+        else:
+            fieldname = 'g-recaptcha-response'
+        self.recaptcha_response_name = fieldname
+        self.recaptcha_challenge_name = fieldname
+
+        # Keep going as usually
         return super(GenReCaptchaInput, self).__init__(*args, **kwargs)
 
 #    def __init__(self, public_key=None, use_ssl=None, attrs={}, *args, **kwargs):
@@ -901,5 +918,6 @@ class GenReCaptchaInput(ReCaptcha):
         if self.legacy:
             html = super(GenReCaptchaInput, self).render(name, value, attrs)
         else:
-            html = '<div vc-recaptcha key="\'{}\'" ng-model="{}"></div>'.format(self.public_key, name)
+            html = '<input ng-model="{0}" name="{0}" id="id_{0}" type="hidden" ng-required="true">'.format(name)
+            html+= '<div vc-recaptcha key="\'{}\'" ng-model="{}"></div>'.format(self.public_key, name)
         return html
